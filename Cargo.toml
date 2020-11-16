@@ -8,3 +8,5 @@ edition = "2018"
 
 [dependencies]
 lettre = "0.10.0-alpha.4"
+serde = "0.9"
+serde_yaml = "0.6"
