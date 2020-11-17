@@ -1,39 +1,74 @@
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{Message, SmtpTransport, Transport};
 use serde_yaml;
-use std::fs::File;
-use std::io::prelude::*;
-use std::collections::BTreeMap;
+use serde::Deserialize;
+use serde::Serialize;
+use tinytemplate::TinyTemplate;
+
+use rand::thread_rng;
+use rand::seq::SliceRandom;
+
+#[derive(Debug, Deserialize)]
+struct Config {
+    smtp_server: String,
+    smtp_username: String,
+    smtp_password: String,
+    mail_from: String,
+    mails_to: Vec<String>,
+    subject: String,
+    body: String
+}
+#[derive(Serialize)]
+struct Context {
+    first_name: String,
+    last_name: String
+}
+
 
 fn main() {
     let config_file = std::fs::File::open("config.yaml").unwrap();
-    let config_file_btree: BTreeMap<String, String> = serde_yaml::from_reader(config_file).unwrap();
-    let smtp_server = config_file_btree.get("smtp_server").as_deref().unwrap().to_string();
-    let smtp_username = config_file_btree.get("smtp_username").as_deref().unwrap().to_string();
-    let smtp_password = config_file_btree.get("smtp_password").as_deref().unwrap().to_string();
-    let mail_from = config_file_btree.get("mail_from").as_deref().unwrap().to_string();
-    let mail_to = config_file_btree.get("mail_to").as_deref().unwrap().to_string();
-    let subject = config_file_btree.get("subject").as_deref().unwrap().to_string();
-    let body = config_file_btree.get("body").as_deref().unwrap().to_string();
+    let config_file_btree: Config = serde_yaml::from_reader(config_file).unwrap();
+    let mut body_template = TinyTemplate::new();
 
-    let email = Message::builder()
-        .from(mail_from.parse().unwrap())
-        .to(mail_to.parse().unwrap())
-        .subject(subject)
-        .body(body)
-        .unwrap();
 
-    let creds = Credentials::new(smtp_username, smtp_password);
+    let mut mailts_to: Vec<String> = config_file_btree.mails_to;
+    mailts_to.shuffle(&mut thread_rng());
 
-    // Open a remote connection
-    let mailer = SmtpTransport::relay(&smtp_server)
-        .unwrap()
-        .credentials(creds)
-        .build();
+    body_template.add_template("body", &config_file_btree.body).unwrap();
 
-    // Send the email
-    match mailer.send(&email) {
-        Ok(_) => println!("Email sent successfully!"),
-        Err(e) => panic!("Could not send email: {:?}", e),
+    for (i, mail_to) in mailts_to.iter().enumerate() {
+        let mut receiving: usize = 0;
+
+        // use to take the gift receive mail in the Vec if it is the last mails get first Vec entry
+        if i+1 < mailts_to.len() {
+            receiving = i+1;
+        }
+
+        let chunks_receiving_mail: Vec<&str> = mailts_to[receiving].split(" ").collect();
+        let context = Context {
+            first_name: chunks_receiving_mail[0].to_string(),
+            last_name: chunks_receiving_mail[1].to_string()
+        };
+
+        let email = Message::builder()
+            .from(config_file_btree.mail_from.parse().unwrap())
+            .to(mail_to.parse().unwrap())
+            .subject(config_file_btree.subject.to_string())
+            .body(body_template.render("body", &context).unwrap().to_string())
+            .unwrap();
+
+        let creds = Credentials::new(config_file_btree.smtp_username.to_string(), config_file_btree.smtp_password.to_string());
+
+        // Open a remote connection
+        let mailer = SmtpTransport::relay(&config_file_btree.smtp_server)
+            .unwrap()
+            .credentials(creds)
+            .build();
+
+        // Send the email
+        match mailer.send(&email) {
+            Ok(_) => println!("Email sent successfully!"),
+            Err(e) => panic!("Could not send email: {:?}", e),
+        }
     }
 }

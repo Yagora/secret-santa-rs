@@ -1,0 +1,16 @@
+smtp_server: "yourmailserver@mail.com"
+smtp_username: "usernameOrEmail"
+smtp_password: "yourPassword"
+mail_from: "Your Mail <mail@mail.io>"
+mails_to:
+  - "first_name last_name <mail@mail.io>"
+  - "first_name last_name <mail@mail.io>"
+  - "first_name last_name <mail@mail.io>"
+subject: "Mail subject"
+body: "Hello,\n
+
+You have to offer a gif to {first_name} {last_name}.
+\nEven if we are confined!\n
+
+Santa Cruz
+"
