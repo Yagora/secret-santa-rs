@@ -1,12 +1,8 @@
-use lettre::transport::smtp::authentication::Credentials;
-use lettre::{Message, SmtpTransport, Transport};
-use serde_yaml;
-use serde::Deserialize;
-use serde::Serialize;
+use lettre::{transport::smtp::authentication::Credentials, Message, SmtpTransport, Transport};
+use rand::{seq::SliceRandom, thread_rng};
+use serde::{Deserialize, Serialize};
+use std::fs::File;
 use tinytemplate::TinyTemplate;
-
-use rand::thread_rng;
-use rand::seq::SliceRandom;
 
 #[derive(Debug, Deserialize)]
 struct Config {
@@ -16,52 +12,57 @@ struct Config {
     mail_from: String,
     mails_to: Vec<String>,
     subject: String,
-    body: String
+    body: String,
 }
 #[derive(Serialize)]
 struct Context {
     first_name: String,
-    last_name: String
+    last_name: String,
 }
 
-
 fn main() {
-    let config_file = std::fs::File::open("config.yaml").unwrap();
-    let config_file_btree: Config = serde_yaml::from_reader(config_file).unwrap();
+    let config_file = File::open("config.yaml").expect("Can't open file");
+    let mut config: Config = serde_yaml::from_reader(config_file).expect("Can't parse opened file");
     let mut body_template = TinyTemplate::new();
 
+    config.mails_to.shuffle(&mut thread_rng());
 
-    let mut mailts_to: Vec<String> = config_file_btree.mails_to;
-    mailts_to.shuffle(&mut thread_rng());
+    body_template
+        .add_template("body", &config.body)
+        .expect("Can't add body to the template");
 
-    body_template.add_template("body", &config_file_btree.body).unwrap();
+    for (i, mail_to) in config.mails_to.iter().enumerate() {
+        let mut receiving_gift_index = i + 1;
 
-    for (i, mail_to) in mailts_to.iter().enumerate() {
-        let mut receiving: usize = 0;
-
-        // use to take the gift receive mail in the Vec if it is the last mails get first Vec entry
-        if i+1 < mailts_to.len() {
-            receiving = i+1;
+        // take the first mail_to if the current is the last
+        if i == config.mails_to.len() - 1 {
+            receiving_gift_index = 0;
         }
 
-        let chunks_receiving_mail: Vec<&str> = mailts_to[receiving].split(" ").collect();
+        let chunks_receiving_mail: Vec<&str> =
+            config.mails_to[receiving_gift_index].split(' ').collect();
         let context = Context {
             first_name: chunks_receiving_mail[0].to_string(),
-            last_name: chunks_receiving_mail[1].to_string()
+            last_name: chunks_receiving_mail[1].to_string(),
         };
 
         let email = Message::builder()
-            .from(config_file_btree.mail_from.parse().unwrap())
-            .to(mail_to.parse().unwrap())
-            .subject(config_file_btree.subject.to_string())
-            .body(body_template.render("body", &context).unwrap().to_string())
-            .unwrap();
+            .from(config.mail_from.parse().expect("Can't parse mail_from"))
+            .to(mail_to.parse().expect("Can't parse mail_to"))
+            .subject(config.subject.clone())
+            .body(
+                body_template
+                    .render("body", &context)
+                    .expect("Unknown template body")
+                    .clone(),
+            )
+            .expect("Can't build message");
 
-        let creds = Credentials::new(config_file_btree.smtp_username.to_string(), config_file_btree.smtp_password.to_string());
+        let creds = Credentials::new(config.smtp_username.clone(), config.smtp_password.clone());
 
         // Open a remote connection
-        let mailer = SmtpTransport::relay(&config_file_btree.smtp_server)
-            .unwrap()
+        let mailer = SmtpTransport::relay(&config.smtp_server)
+            .expect("Can't upgrad the connection")
             .credentials(creds)
             .build();
 
