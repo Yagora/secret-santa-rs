@@ -37,14 +37,14 @@ fn main() {
     body_template.add_template("body", &config_file_btree.body).unwrap();
 
     for (i, mail_to) in mailts_to.iter().enumerate() {
-        let mut receiving: usize = 0;
+        let mut receiving_gift_index: usize = 0;
 
-        // use to take the gift receive mail in the Vec if it is the last mails get first Vec entry
+        // used to take the next mail to defined the person who receives the gift if it is the last mail get the first Vec's entry
         if i+1 < mailts_to.len() {
-            receiving = i+1;
+            receiving_gift_index = i+1;
         }
 
-        let chunks_receiving_mail: Vec<&str> = mailts_to[receiving].split(" ").collect();
+        let chunks_receiving_mail: Vec<&str> = mailts_to[receiving_gift_index].split(" ").collect();
         let context = Context {
             first_name: chunks_receiving_mail[0].to_string(),
             last_name: chunks_receiving_mail[1].to_string()
