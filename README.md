@@ -1,4 +1,4 @@
-# secret-santa-rs
+# Secret-santa-rs
 
 Welcome to the first secret Santa program in rust.
 
