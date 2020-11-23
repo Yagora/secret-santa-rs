@@ -20,7 +20,6 @@ struct Context {
     last_name: String,
 }
 
-
 fn main() {
     let config_file = File::open("config.yaml").expect("Cannot open the file");
     let mut config: Config = serde_yaml::from_reader(config_file).expect("Cannot parse the config file");
