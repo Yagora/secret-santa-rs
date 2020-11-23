@@ -1,7 +1,5 @@
 # Secret-santa-rs
 
-Welcome to the first secret Santa program in rust.
-
 ## How to use
 
 You have to `clone` this repository and fulfill the config.yaml with your personal configuration.
