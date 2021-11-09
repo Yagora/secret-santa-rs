@@ -9,6 +9,8 @@ If you participate too, you have to insert your email in the list.
 
 To finish run `cargo run`
 
+Thank you,
+
 Best regards,
 
 Santa Cruz
